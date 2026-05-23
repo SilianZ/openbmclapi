@@ -1,167 +1,167 @@
-import colors from 'colors/safe.js'
-import {Request, Response} from 'express'
-import Keyv from 'keyv'
-import {BucketItem, Client, S3Error} from 'minio'
-import ms from 'ms'
-import {basename, join} from 'path'
-import {z} from 'zod'
-import {logger} from '../logger.js'
-import {IFileInfo, IGCCounter} from '../types.js'
-import {getSize} from '../util.js'
-import {IStorage} from './base.storage.js'
+import Silian_colors from 'colors/safe.js'
+import {Request as Silian_Request, Response as Silian_Response} from 'express'
+import Silian_Keyv from 'keyv'
+import {BucketItem as Silian_BucketItem, Client as Silian_Client, S3Error as Silian_S3Error} from 'minio'
+import Silian_ms from 'ms'
+import {basename as Silian_basename, join as Silian_join} from 'path'
+import {z as Silian_z} from 'zod'
+import {logger as Silian_logger} from '../logger.js'
+import {IFileInfo as Silian_IFileInfo, IGCCounter as Silian_IGCCounter} from '../types.js'
+import {getSize as Silian_getSize} from '../util.js'
+import {IStorage as Silian_IStorage} from './base.storage.js'
 
-const storageConfigSchema = z.object({
-  url: z.string(),
-  internalUrl: z.string().optional(),
+const Silian_storageConfigSchema = Silian_z.object({
+  url: Silian_z.string(),
+  internalUrl: Silian_z.string().optional(),
 })
 
-export class MinioStorage implements IStorage {
+export class MinioStorage implements Silian_IStorage {
   /** Map<hash, FileInfo> */
   protected files = new Map<string, {size: number; path: string}>()
-  protected existsCache = new Keyv({
-    ttl: ms('1h'),
+  protected existsCache = new Silian_Keyv({
+    ttl: Silian_ms('1h'),
   })
 
-  private readonly client: Client
-  private readonly internalClient: Client
+  private readonly client: Silian_Client
+  private readonly internalClient: Silian_Client
   private readonly prefix: string
   private readonly bucket: string
 
-  constructor(storageConfig: unknown) {
-    const config = storageConfigSchema.parse(storageConfig)
-    const url = new URL(config.url)
-    this.client = new Client({
-      endPoint: url.hostname,
-      accessKey: url.username,
-      secretKey: url.password,
-      port: parseInt(url.port, 10),
-      useSSL: url.protocol === 'https:',
-      region: url.searchParams.get('region') ?? undefined,
+  constructor(Silian_storageConfig: unknown) {
+    const Silian_config = Silian_storageConfigSchema.parse(Silian_storageConfig)
+    const Silian_url = new URL(Silian_config.url)
+    this.client = new Silian_Client({
+      endPoint: Silian_url.hostname,
+      accessKey: Silian_url.username,
+      secretKey: Silian_url.password,
+      port: parseInt(Silian_url.port, 10),
+      useSSL: Silian_url.protocol === 'https:',
+      region: Silian_url.searchParams.get('region') ?? undefined,
     })
-    if (config.internalUrl) {
-      const internalUrl = new URL(config.internalUrl)
-      this.internalClient = new Client({
-        endPoint: internalUrl.hostname,
-        accessKey: internalUrl.username,
-        secretKey: internalUrl.password,
-        port: parseInt(internalUrl.port, 10),
-        useSSL: internalUrl.protocol === 'https:',
-        region: url.searchParams.get('region') ?? undefined,
+    if (Silian_config.internalUrl) {
+      const Silian_internalUrl = new URL(Silian_config.internalUrl)
+      this.internalClient = new Silian_Client({
+        endPoint: Silian_internalUrl.hostname,
+        accessKey: Silian_internalUrl.username,
+        secretKey: Silian_internalUrl.password,
+        port: parseInt(Silian_internalUrl.port, 10),
+        useSSL: Silian_internalUrl.protocol === 'https:',
+        region: Silian_url.searchParams.get('region') ?? undefined,
       })
     } else {
       this.internalClient = this.client
     }
-    const [bucket, ...prefix] = url.pathname.split('/').filter(Boolean)
-    this.bucket = bucket
-    this.prefix = prefix.join('/')
+    const [Silian_bucket, ...Silian_prefix] = Silian_url.pathname.split('/').filter(Boolean)
+    this.bucket = Silian_bucket
+    this.prefix = Silian_prefix.join('/')
   }
 
   public async check(): Promise<boolean> {
     try {
-      await this.internalClient.putObject(this.bucket, join(this.prefix, '.check'), Buffer.from(Date.now().toString()))
-      await this.client.putObject(this.bucket, join(this.prefix, '.check'), Buffer.from(Date.now().toString()))
+      await this.internalClient.putObject(this.bucket, Silian_join(this.prefix, '.check'), Buffer.from(Date.now().toString()))
+      await this.client.putObject(this.bucket, Silian_join(this.prefix, '.check'), Buffer.from(Date.now().toString()))
       return true
-    } catch (e) {
-      logger.error(e, '存储检查异常')
+    } catch (Silian_e) {
+      Silian_logger.error(Silian_e, '存储检查异常')
       return false
     } finally {
       try {
-        await this.internalClient.removeObject(this.bucket, join(this.prefix, '.check'))
-        await this.client.removeObject(this.bucket, join(this.prefix, '.check'))
-      } catch (e) {
-        logger.warn(e, '删除临时文件失败')
+        await this.internalClient.removeObject(this.bucket, Silian_join(this.prefix, '.check'))
+        await this.client.removeObject(this.bucket, Silian_join(this.prefix, '.check'))
+      } catch (Silian_e) {
+        Silian_logger.warn(Silian_e, '删除临时文件失败')
       }
     }
   }
 
-  public async exists(path: string): Promise<boolean> {
+  public async exists(Silian_path: string): Promise<boolean> {
     try {
-      if (await this.existsCache.has(path)) {
+      if (await this.existsCache.has(Silian_path)) {
         return true
       }
-      await this.internalClient.statObject(this.bucket, join(this.prefix, path))
-      await this.existsCache.set(path, true)
+      await this.internalClient.statObject(this.bucket, Silian_join(this.prefix, Silian_path))
+      await this.existsCache.set(Silian_path, true)
       return true
-    } catch (e) {
-      if (e instanceof S3Error) {
-        if (e.code === 'NoSuchKey') {
+    } catch (Silian_e) {
+      if (Silian_e instanceof Silian_S3Error) {
+        if (Silian_e.code === 'NoSuchKey') {
           return false
         }
       }
-      throw e
+      throw Silian_e
     }
   }
 
   public async express(
-    hashPath: string,
-    req: Request,
-    res: Response,
+    Silian_hashPath: string,
+    Silian_req: Silian_Request,
+    Silian_res: Silian_Response,
   ): Promise<{
     bytes: number
     hits: number
   }> {
-    const path = join(this.prefix, hashPath)
-    let resHeaders: {'response-content-disposition': string} | undefined
-    const fileInfo = this.files.get(hashPath)
-    if (fileInfo) {
-      const name = basename(fileInfo.path)
-      resHeaders = {
-        'response-content-disposition': `attachment; filename="${encodeURIComponent(name)}"`,
+    const Silian_path = Silian_join(this.prefix, Silian_hashPath)
+    let Silian_resHeaders: {'response-content-disposition': string} | undefined
+    const Silian_fileInfo = this.files.get(Silian_hashPath)
+    if (Silian_fileInfo) {
+      const Silian_name = Silian_basename(Silian_fileInfo.path)
+      Silian_resHeaders = {
+        'response-content-disposition': `attachment; filename="${encodeURIComponent(Silian_name)}"`,
       }
     }
-    const url = await this.client.presignedGetObject(this.bucket, path, 60, resHeaders)
-    res.redirect(url)
-    const size = getSize(this.files.get(req.params.hash)?.size ?? 0, req.headers.range)
-    return {bytes: size, hits: 1}
+    const Silian_url = await this.client.presignedGetObject(this.bucket, Silian_path, 60, Silian_resHeaders)
+    Silian_res.redirect(Silian_url)
+    const Silian_size = Silian_getSize(this.files.get(Silian_req.params.hash)?.size ?? 0, Silian_req.headers.range)
+    return {bytes: Silian_size, hits: 1}
   }
 
-  public async gc(files: {path: string; hash: string; size: number}[]): Promise<IGCCounter> {
-    const counter = {count: 0, size: 0}
-    const fileSet = new Set<string>()
-    for (const file of files) {
-      fileSet.add(file.hash)
+  public async gc(Silian_files: {path: string; hash: string; size: number}[]): Promise<Silian_IGCCounter> {
+    const Silian_counter = {count: 0, size: 0}
+    const Silian_fileSet = new Set<string>()
+    for (const Silian_file of Silian_files) {
+      Silian_fileSet.add(Silian_file.hash)
     }
-    const scanStream = this.internalClient.listObjectsV2(this.bucket, this.prefix)
-    for await (const file of scanStream) {
-      const item = file as BucketItem
-      if (!item.name) continue
-      const path = item.name.replace(this.prefix, '')
-      if (!fileSet.has(path)) {
-        logger.info(colors.gray(`delete expire file: ${path}`))
-        await this.internalClient.removeObject(this.bucket, item.name)
-        this.files.delete(path)
-        counter.count++
-        counter.size += file
+    const Silian_scanStream = this.internalClient.listObjectsV2(this.bucket, this.prefix)
+    for await (const Silian_file of Silian_scanStream) {
+      const Silian_item = Silian_file as Silian_BucketItem
+      if (!Silian_item.name) continue
+      const Silian_path = Silian_item.name.replace(this.prefix, '')
+      if (!Silian_fileSet.has(Silian_path)) {
+        Silian_logger.info(Silian_colors.gray(`delete expire file: ${Silian_path}`))
+        await this.internalClient.removeObject(this.bucket, Silian_item.name)
+        this.files.delete(Silian_path)
+        Silian_counter.count++
+        Silian_counter.size += Silian_file
       }
     }
-    return counter
+    return Silian_counter
   }
 
-  public async getMissingFiles(files: IFileInfo[]): Promise<IFileInfo[]> {
-    const remoteFileList = new Map(files.map((file) => [file.hash, file]))
+  public async getMissingFiles(Silian_files: Silian_IFileInfo[]): Promise<Silian_IFileInfo[]> {
+    const Silian_remoteFileList = new Map(Silian_files.map((Silian_file) => [Silian_file.hash, Silian_file]))
     if (this.files.size !== 0) {
-      for (const hash of this.files.keys()) {
-        remoteFileList.delete(hash)
+      for (const Silian_hash of this.files.keys()) {
+        Silian_remoteFileList.delete(Silian_hash)
       }
-      return [...remoteFileList.values()]
+      return [...Silian_remoteFileList.values()]
     }
 
-    const scanStream = this.internalClient.listObjectsV2(this.bucket, this.prefix, true)
-    for await (const file of scanStream) {
-      const item = file as BucketItem
-      if (!item.name) continue
-      const hash = basename(item.name)
-      const existsFile = remoteFileList.get(hash)
-      if (existsFile && existsFile.size === item.size) {
-        this.files.set(hash, {size: item.size, path: item.name.replace(this.prefix, '')})
-        remoteFileList.delete(hash)
+    const Silian_scanStream = this.internalClient.listObjectsV2(this.bucket, this.prefix, true)
+    for await (const Silian_file of Silian_scanStream) {
+      const Silian_item = Silian_file as Silian_BucketItem
+      if (!Silian_item.name) continue
+      const Silian_hash = Silian_basename(Silian_item.name)
+      const Silian_existsFile = Silian_remoteFileList.get(Silian_hash)
+      if (Silian_existsFile && Silian_existsFile.size === Silian_item.size) {
+        this.files.set(Silian_hash, {size: Silian_item.size, path: Silian_item.name.replace(this.prefix, '')})
+        Silian_remoteFileList.delete(Silian_hash)
       }
     }
-    return [...remoteFileList.values()]
+    return [...Silian_remoteFileList.values()]
   }
 
-  public async writeFile(path: string, content: Buffer, fileInfo: IFileInfo): Promise<void> {
-    await this.internalClient.putObject(this.bucket, join(this.prefix, path), content)
-    this.files.set(fileInfo.hash, fileInfo)
+  public async writeFile(Silian_path: string, Silian_content: Buffer, Silian_fileInfo: Silian_IFileInfo): Promise<void> {
+    await this.internalClient.putObject(this.bucket, Silian_join(this.prefix, Silian_path), Silian_content)
+    this.files.set(Silian_fileInfo.hash, Silian_fileInfo)
   }
 }

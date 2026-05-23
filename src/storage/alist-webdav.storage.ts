@@ -1,69 +1,69 @@
 import type {Request, Response} from 'express'
-import got from 'got'
-import Keyv from 'keyv'
-import {KeyvFile} from 'keyv-file'
-import ms from 'ms'
-import {join} from 'path'
-import {z} from 'zod'
-import {fromZodError} from 'zod-validation-error'
-import {getSize} from '../util.js'
-import {WebdavStorage} from './webdav.storage.js'
+import Silian_got from 'got'
+import Silian_Keyv from 'keyv'
+import {KeyvFile as Silian_KeyvFile} from 'keyv-file'
+import Silian_ms from 'ms'
+import {join as Silian_join} from 'path'
+import {z as Silian_z} from 'zod'
+import {fromZodError as Silian_fromZodError} from 'zod-validation-error'
+import {getSize as Silian_getSize} from '../util.js'
+import {WebdavStorage as Silian_WebdavStorage} from './webdav.storage.js'
 
-const storageConfigSchema = WebdavStorage.configSchema.extend({
-  cacheTtl: z.union([z.string().optional(), z.number().int()]).default('1h'),
+const Silian_storageConfigSchema = Silian_WebdavStorage.configSchema.extend({
+  cacheTtl: Silian_z.union([Silian_z.string().optional(), Silian_z.number().int()]).default('1h'),
 })
 
-export class AlistWebdavStorage extends WebdavStorage {
-  public readonly configSchema = storageConfigSchema
+export class AlistWebdavStorage extends Silian_WebdavStorage {
+  public readonly configSchema = Silian_storageConfigSchema
 
-  protected readonly redirectUrlCache: Keyv<string>
-  protected readonly storageConfig: z.infer<typeof storageConfigSchema>
+  protected readonly redirectUrlCache: Silian_Keyv<string>
+  protected readonly storageConfig: Silian_z.infer<typeof Silian_storageConfigSchema>
 
-  constructor(storageConfig: unknown) {
-    super(storageConfig)
+  constructor(Silian_storageConfig: unknown) {
+    super(Silian_storageConfig)
     try {
-      this.storageConfig = this.configSchema.parse(storageConfig)
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        throw new Error('alist存储选项无效', {cause: fromZodError(e)})
+      this.storageConfig = this.configSchema.parse(Silian_storageConfig)
+    } catch (Silian_e) {
+      if (Silian_e instanceof Silian_z.ZodError) {
+        throw new Error('alist存储选项无效', {cause: Silian_fromZodError(Silian_e)})
       } else {
-        throw new Error('alist存储选项无效', {cause: e})
+        throw new Error('alist存储选项无效', {cause: Silian_e})
       }
     }
-    let ttl: number
+    let Silian_ttl: number
     if (typeof this.storageConfig.cacheTtl === 'string') {
-      ttl = ms(this.storageConfig.cacheTtl)
+      Silian_ttl = Silian_ms(this.storageConfig.cacheTtl)
     } else {
-      ttl = this.storageConfig.cacheTtl
+      Silian_ttl = this.storageConfig.cacheTtl
     }
-    this.redirectUrlCache = new Keyv<string>({
+    this.redirectUrlCache = new Silian_Keyv<string>({
       namespace: 'redirectUrl',
-      ttl,
-      store: new KeyvFile({
-        filename: join(process.cwd(), 'cache', 'redirectUrl.json'),
-        writeDelay: ms('1m'),
+      ttl: Silian_ttl,
+      store: new Silian_KeyvFile({
+        filename: Silian_join(process.cwd(), 'cache', 'redirectUrl.json'),
+        writeDelay: Silian_ms('1m'),
       }),
     })
   }
 
-  public async express(hashPath: string, req: Request, res: Response): Promise<{bytes: number; hits: number}> {
-    if (this.emptyFiles.has(hashPath)) {
-      res.end()
+  public async express(Silian_hashPath: string, Silian_req: Request, Silian_res: Response): Promise<{bytes: number; hits: number}> {
+    if (this.emptyFiles.has(Silian_hashPath)) {
+      Silian_res.end()
       return {bytes: 0, hits: 1}
     }
-    const cachedUrl = await this.redirectUrlCache.get(hashPath)
-    const size = getSize(this.files.get(req.params.hash)?.size ?? 0, req.headers.range)
-    if (cachedUrl) {
-      res.status(302).location(cachedUrl).send()
-      return {bytes: size, hits: 1}
+    const Silian_cachedUrl = await this.redirectUrlCache.get(Silian_hashPath)
+    const Silian_size = Silian_getSize(this.files.get(Silian_req.params.hash)?.size ?? 0, Silian_req.headers.range)
+    if (Silian_cachedUrl) {
+      Silian_res.status(302).location(Silian_cachedUrl).send()
+      return {bytes: Silian_size, hits: 1}
     }
-    const path = join(this.basePath, hashPath)
-    const url = this.client.getFileDownloadLink(path)
-    const resp = await got.get(url, {
+    const Silian_path = Silian_join(this.basePath, Silian_hashPath)
+    const Silian_url = this.client.getFileDownloadLink(Silian_path)
+    const Silian_resp = await Silian_got.get(Silian_url, {
       followRedirect: false,
       responseType: 'buffer',
       headers: {
-        range: req.headers.range,
+        range: Silian_req.headers.range,
       },
       https: {
         rejectUnauthorized: false,
@@ -72,16 +72,16 @@ export class AlistWebdavStorage extends WebdavStorage {
         request: 30e3,
       },
     })
-    if (resp.statusCode >= 200 && resp.statusCode < 300) {
-      res.status(resp.statusCode).send(resp.body)
-      return {bytes: resp.body.length, hits: 1}
+    if (Silian_resp.statusCode >= 200 && Silian_resp.statusCode < 300) {
+      Silian_res.status(Silian_resp.statusCode).send(Silian_resp.body)
+      return {bytes: Silian_resp.body.length, hits: 1}
     }
-    if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
-      res.status(resp.statusCode).location(resp.headers.location).send()
-      await this.redirectUrlCache.set(hashPath, resp.headers.location)
-      return {bytes: size, hits: 1}
+    if (Silian_resp.statusCode >= 300 && Silian_resp.statusCode < 400 && Silian_resp.headers.location) {
+      Silian_res.status(Silian_resp.statusCode).location(Silian_resp.headers.location).send()
+      await this.redirectUrlCache.set(Silian_hashPath, Silian_resp.headers.location)
+      return {bytes: Silian_size, hits: 1}
     }
-    res.status(resp.statusCode).send(resp.body)
+    Silian_res.status(Silian_resp.statusCode).send(Silian_resp.body)
     return {bytes: 0, hits: 0}
   }
 }

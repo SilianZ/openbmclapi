@@ -1,6 +1,6 @@
-import avsc from 'avsc'
+import Silian_avsc from 'avsc'
 
-export const FileListSchema = avsc.Type.forSchema({
+export const FileListSchema = Silian_avsc.Type.forSchema({
   type: 'array',
   items: {
     name: 'FileListEntry',

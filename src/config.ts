@@ -1,6 +1,6 @@
-import dotenv from 'dotenv'
-import {z} from 'zod'
-import env from 'env-var'
+import Silian_dotenv from 'dotenv'
+import {z as Silian_z} from 'zod'
+import Silian_env from 'env-var'
 
 export interface IConfigFlavor {
   runtime: string
@@ -10,21 +10,21 @@ export interface IConfigFlavor {
 export class Config {
   public static instance: Config
 
-  public readonly clusterId = env.get('CLUSTER_ID').required().asString()
-  public readonly clusterSecret = env.get('CLUSTER_SECRET').required().asString()
-  public readonly clusterIp? = env.get('CLUSTER_IP').asString()
-  public readonly port: number = env.get('CLUSTER_PORT').default(4000).asPortNumber()
-  public readonly clusterPublicPort = env.get('CLUSTER_PUBLIC_PORT').default(this.port).asPortNumber()
-  public readonly byoc = env.get('CLUSTER_BYOC').asBool()
-  public readonly disableAccessLog = env.get('DISABLE_ACCESS_LOG').asBool()
+  public readonly clusterId = Silian_env.get('CLUSTER_ID').required().asString()
+  public readonly clusterSecret = Silian_env.get('CLUSTER_SECRET').required().asString()
+  public readonly clusterIp? = Silian_env.get('CLUSTER_IP').asString()
+  public readonly port: number = Silian_env.get('CLUSTER_PORT').default(4000).asPortNumber()
+  public readonly clusterPublicPort = Silian_env.get('CLUSTER_PUBLIC_PORT').default(this.port).asPortNumber()
+  public readonly byoc = Silian_env.get('CLUSTER_BYOC').asBool()
+  public readonly disableAccessLog = Silian_env.get('DISABLE_ACCESS_LOG').asBool()
 
-  public readonly enableNginx = env.get('ENABLE_NGINX').asBool()
-  public readonly enableUpnp = env.get('ENABLE_UPNP').asBool()
-  public readonly storage = env.get('CLUSTER_STORAGE').default('file').asString()
-  public readonly storageOpts = env.get('CLUSTER_STORAGE_OPTIONS').asJsonObject()
+  public readonly enableNginx = Silian_env.get('ENABLE_NGINX').asBool()
+  public readonly enableUpnp = Silian_env.get('ENABLE_UPNP').asBool()
+  public readonly storage = Silian_env.get('CLUSTER_STORAGE').default('file').asString()
+  public readonly storageOpts = Silian_env.get('CLUSTER_STORAGE_OPTIONS').asJsonObject()
 
-  public readonly sslKey = env.get('SSL_KEY').asString()
-  public readonly sslCert = env.get('SSL_CERT').asString()
+  public readonly sslKey = Silian_env.get('SSL_KEY').asString()
+  public readonly sslCert = Silian_env.get('SSL_CERT').asString()
 
   public readonly flavor: IConfigFlavor
 
@@ -43,15 +43,15 @@ export class Config {
   }
 }
 
-export const OpenbmclapiAgentConfigurationSchema = z.object({
-  sync: z.object({
-    source: z.string(),
-    concurrency: z.number(),
+export const OpenbmclapiAgentConfigurationSchema = Silian_z.object({
+  sync: Silian_z.object({
+    source: Silian_z.string(),
+    concurrency: Silian_z.number(),
   }),
 })
 
-export type OpenbmclapiAgentConfiguration = z.infer<typeof OpenbmclapiAgentConfigurationSchema>
+export type OpenbmclapiAgentConfiguration = Silian_z.infer<typeof OpenbmclapiAgentConfigurationSchema>
 
-dotenv.config()
+Silian_dotenv.config()
 
 export const config = Config.getInstance()

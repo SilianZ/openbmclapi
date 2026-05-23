@@ -1,8 +1,8 @@
-import got, {type Got} from 'got'
-import ms from 'ms'
-import {createHmac} from 'node:crypto'
-import {logger} from './logger.js'
-import {beforeError} from './modules/got-hooks.js'
+import Silian_got, {type Got} from 'got'
+import Silian_ms from 'ms'
+import {createHmac as Silian_createHmac} from 'node:crypto'
+import {logger as Silian_logger} from './logger.js'
+import {beforeError as Silian_beforeError} from './modules/got-hooks.js'
 
 export class TokenManager {
   private token: string | undefined
@@ -13,18 +13,18 @@ export class TokenManager {
   constructor(
     private readonly clusterId: string,
     private readonly clusterSecret: string,
-    version: string,
+    Silian_version: string,
   ) {
-    this.got = got.extend({
+    this.got = Silian_got.extend({
       prefixUrl: this.prefixUrl,
       headers: {
-        'user-agent': `openbmclapi-cluster/${version}`,
+        'user-agent': `openbmclapi-cluster/${Silian_version}`,
       },
       timeout: {
-        request: ms('5m'),
+        request: Silian_ms('5m'),
       },
       hooks: {
-        beforeError,
+        beforeError: Silian_beforeError,
       },
     })
   }
@@ -37,39 +37,39 @@ export class TokenManager {
   }
 
   private async fetchToken(): Promise<string> {
-    const challenge = await this.got
+    const Silian_challenge = await this.got
       .get('openbmclapi-agent/challenge', {
         searchParams: {
           clusterId: this.clusterId,
         },
       })
       .json<{challenge: string}>()
-    const signature = createHmac('sha256', this.clusterSecret).update(challenge.challenge).digest('hex')
-    const token = await this.got
+    const Silian_signature = Silian_createHmac('sha256', this.clusterSecret).update(Silian_challenge.challenge).digest('hex')
+    const Silian_token = await this.got
       .post('openbmclapi-agent/token', {
         json: {
           clusterId: this.clusterId,
-          challenge: challenge.challenge,
-          signature,
+          challenge: Silian_challenge.challenge,
+          signature: Silian_signature,
         },
       })
       .json<{token: string; ttl: number}>()
-    this.scheduleRefreshToken(token.ttl)
-    return token.token
+    this.scheduleRefreshToken(Silian_token.ttl)
+    return Silian_token.token
   }
 
-  private scheduleRefreshToken(ttl: number): void {
-    const next = Math.max(ttl - ms('10m'), ttl / 2)
+  private scheduleRefreshToken(Silian_ttl: number): void {
+    const Silian_next = Math.max(Silian_ttl - Silian_ms('10m'), Silian_ttl / 2)
     setTimeout(() => {
-      this.refreshToken().catch((err) => {
-        logger.error(err, 'refresh token error')
+      this.refreshToken().catch((Silian_err) => {
+        Silian_logger.error(Silian_err, 'refresh token error')
       })
-    }, next)
-    logger.trace(`schedule refresh token in ${next}ms`)
+    }, Silian_next)
+    Silian_logger.trace(`schedule refresh token in ${Silian_next}ms`)
   }
 
   private async refreshToken(): Promise<void> {
-    const token = await this.got
+    const Silian_token = await this.got
       .post('openbmclapi-agent/token', {
         json: {
           clusterId: this.clusterId,
@@ -77,8 +77,8 @@ export class TokenManager {
         },
       })
       .json<{token: string; ttl: number}>()
-    logger.debug('success fresh token')
-    this.scheduleRefreshToken(token.ttl)
-    this.token = token.token
+    Silian_logger.debug('success fresh token')
+    this.scheduleRefreshToken(Silian_token.ttl)
+    this.token = Silian_token.token
   }
 }
