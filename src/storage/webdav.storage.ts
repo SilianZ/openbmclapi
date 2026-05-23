@@ -1,131 +1,131 @@
-import colors from 'colors/safe.js'
+import Silian_colors from 'colors/safe.js'
 import type {Request, Response} from 'express'
-import Keyv from 'keyv'
-import ms from 'ms'
-import {Agent} from 'node:https'
-import pMap from 'p-map'
-import {join} from 'path'
-import {createClient, type FileStat, type WebDAVClient} from 'webdav'
-import {z} from 'zod'
-import {fromZodError} from 'zod-validation-error'
-import {logger} from '../logger.js'
-import {IFileInfo, IGCCounter} from '../types.js'
-import {getSize} from '../util.js'
+import Silian_Keyv from 'keyv'
+import Silian_ms from 'ms'
+import {Agent as Silian_Agent} from 'node:https'
+import Silian_pMap from 'p-map'
+import {join as Silian_join} from 'path'
+import {createClient as Silian_createClient, type FileStat, type WebDAVClient} from 'webdav'
+import {z as Silian_z} from 'zod'
+import {fromZodError as Silian_fromZodError} from 'zod-validation-error'
+import {logger as Silian_logger} from '../logger.js'
+import {IFileInfo as Silian_IFileInfo, IGCCounter as Silian_IGCCounter} from '../types.js'
+import {getSize as Silian_getSize} from '../util.js'
 import type {IStorage} from './base.storage.js'
 
-const storageConfigSchema = z.object({
-  url: z.string(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  basePath: z.string(),
+const Silian_storageConfigSchema = Silian_z.object({
+  url: Silian_z.string(),
+  username: Silian_z.string().optional(),
+  password: Silian_z.string().optional(),
+  basePath: Silian_z.string(),
 })
 
 export class WebdavStorage implements IStorage {
-  public static readonly configSchema = storageConfigSchema
+  public static readonly configSchema = Silian_storageConfigSchema
   protected readonly client: WebDAVClient
-  protected readonly storageConfig: z.infer<typeof storageConfigSchema>
+  protected readonly storageConfig: Silian_z.infer<typeof Silian_storageConfigSchema>
   protected readonly basePath: string
 
   /** Map<hash, FileInfo> */
   protected files = new Map<string, {size: number; path: string}>()
   protected emptyFiles = new Set<string>()
 
-  protected existsCache = new Keyv({
-    ttl: ms('1h'),
+  protected existsCache = new Silian_Keyv({
+    ttl: Silian_ms('1h'),
   })
 
-  constructor(storageConfig: unknown) {
+  constructor(Silian_storageConfig: unknown) {
     try {
-      this.storageConfig = storageConfigSchema.parse(storageConfig)
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        throw new Error('webdav存储选项无效', {cause: fromZodError(e)})
+      this.storageConfig = Silian_storageConfigSchema.parse(Silian_storageConfig)
+    } catch (Silian_e) {
+      if (Silian_e instanceof Silian_z.ZodError) {
+        throw new Error('webdav存储选项无效', {cause: Silian_fromZodError(Silian_e)})
       } else {
-        throw new Error('webdav存储选项无效', {cause: e})
+        throw new Error('webdav存储选项无效', {cause: Silian_e})
       }
     }
-    this.client = createClient(this.storageConfig.url, {
+    this.client = Silian_createClient(this.storageConfig.url, {
       username: this.storageConfig.username,
       password: this.storageConfig.password,
-      httpsAgent: new Agent({rejectUnauthorized: false}),
+      httpsAgent: new Silian_Agent({rejectUnauthorized: false}),
     })
     this.basePath = this.storageConfig.basePath
   }
 
   public async init(): Promise<void> {
     if (!(await this.client.exists(this.basePath))) {
-      logger.info(`create base path: ${this.basePath}`)
+      Silian_logger.info(`create base path: ${this.basePath}`)
       await this.client.createDirectory(this.basePath, {recursive: true})
     }
   }
 
   public async check(): Promise<boolean> {
     try {
-      await this.client.putFileContents(join(this.basePath, '.check'), Buffer.from(Date.now().toString()))
+      await this.client.putFileContents(Silian_join(this.basePath, '.check'), Buffer.from(Date.now().toString()))
       return true
-    } catch (e) {
-      logger.error(e, '存储检查异常')
+    } catch (Silian_e) {
+      Silian_logger.error(Silian_e, '存储检查异常')
       return false
     } finally {
       try {
-        await this.client.deleteFile(join(this.basePath, '.check'))
-      } catch (e) {
-        logger.warn(e, '删除临时文件失败')
+        await this.client.deleteFile(Silian_join(this.basePath, '.check'))
+      } catch (Silian_e) {
+        Silian_logger.warn(Silian_e, '删除临时文件失败')
       }
     }
   }
 
-  public async writeFile(path: string, content: Buffer, fileInfo: IFileInfo): Promise<void> {
-    if (content.length === 0) {
-      this.emptyFiles.add(path)
+  public async writeFile(Silian_path: string, Silian_content: Buffer, Silian_fileInfo: Silian_IFileInfo): Promise<void> {
+    if (Silian_content.length === 0) {
+      this.emptyFiles.add(Silian_path)
       return
     }
-    await this.client.putFileContents(join(this.basePath, path), content)
-    this.files.set(fileInfo.hash, {size: content.length, path: fileInfo.path})
+    await this.client.putFileContents(Silian_join(this.basePath, Silian_path), Silian_content)
+    this.files.set(Silian_fileInfo.hash, {size: Silian_content.length, path: Silian_fileInfo.path})
   }
 
-  public async exists(path: string): Promise<boolean> {
-    if (await this.existsCache.has(path)) {
+  public async exists(Silian_path: string): Promise<boolean> {
+    if (await this.existsCache.has(Silian_path)) {
       return true
     }
-    const exists = await this.client.exists(join(this.basePath, path))
-    if (exists) {
-      await this.existsCache.set(path, true)
+    const Silian_exists = await this.client.exists(Silian_join(this.basePath, Silian_path))
+    if (Silian_exists) {
+      await this.existsCache.set(Silian_path, true)
     }
-    return exists
+    return Silian_exists
   }
 
-  public async getMissingFiles<T extends {path: string; hash: string; size: number}>(files: T[]): Promise<T[]> {
-    const remoteFileList = new Map(files.map((file) => [file.hash, file]))
+  public async getMissingFiles<T extends {path: string; hash: string; size: number}>(Silian_files: T[]): Promise<T[]> {
+    const Silian_remoteFileList = new Map(Silian_files.map((Silian_file) => [Silian_file.hash, Silian_file]))
     if (this.files.size !== 0) {
-      for (const hash of this.files.keys()) {
-        remoteFileList.delete(hash)
+      for (const Silian_hash of this.files.keys()) {
+        Silian_remoteFileList.delete(Silian_hash)
       }
-      return [...remoteFileList.values()]
+      return [...Silian_remoteFileList.values()]
     }
-    let queue = [this.basePath]
-    let count = 1
-    let cur = 0
+    let Silian_queue = [this.basePath]
+    let Silian_count = 1
+    let Silian_cur = 0
 
-    while (queue.length !== 0) {
-      const nextQueue = [] as string[]
-      await pMap(
-        queue,
+    while (Silian_queue.length !== 0) {
+      const Silian_nextQueue = [] as string[]
+      await Silian_pMap(
+        Silian_queue,
         // eslint-disable-next-line no-loop-func
-        async (dir) => {
-          const entries = (await this.client.getDirectoryContents(dir)) as FileStat[]
-          entries.sort((a, b) => a.basename.localeCompare(b.basename))
-          logger.trace(`checking ${dir}, (${++cur}/${count})`)
-          for (const entry of entries) {
-            if (entry.type === 'directory') {
-              nextQueue.push(entry.filename)
-              count++
+        async (Silian_dir) => {
+          const Silian_entries = (await this.client.getDirectoryContents(Silian_dir)) as FileStat[]
+          Silian_entries.sort((Silian_a, Silian_b) => Silian_a.basename.localeCompare(Silian_b.basename))
+          Silian_logger.trace(`checking ${Silian_dir}, (${++Silian_cur}/${Silian_count})`)
+          for (const Silian_entry of Silian_entries) {
+            if (Silian_entry.type === 'directory') {
+              Silian_nextQueue.push(Silian_entry.filename)
+              Silian_count++
               continue
             }
-            const file = remoteFileList.get(entry.basename)
-            if (file && file.size === entry.size) {
-              this.files.set(entry.basename, {size: entry.size, path: entry.filename})
-              remoteFileList.delete(entry.basename)
+            const Silian_file = Silian_remoteFileList.get(Silian_entry.basename)
+            if (Silian_file && Silian_file.size === Silian_entry.size) {
+              this.files.set(Silian_entry.basename, {size: Silian_entry.size, path: Silian_entry.filename})
+              Silian_remoteFileList.delete(Silian_entry.basename)
             }
           }
         },
@@ -133,50 +133,50 @@ export class WebdavStorage implements IStorage {
           concurrency: 10,
         },
       )
-      queue = nextQueue
+      Silian_queue = Silian_nextQueue
     }
-    return [...remoteFileList.values()]
+    return [...Silian_remoteFileList.values()]
   }
 
-  public async gc(files: {path: string; hash: string; size: number}[]): Promise<IGCCounter> {
-    const counter = {count: 0, size: 0}
-    const fileSet = new Set<string>()
-    for (const file of files) {
-      fileSet.add(file.hash)
+  public async gc(Silian_files: {path: string; hash: string; size: number}[]): Promise<Silian_IGCCounter> {
+    const Silian_counter = {count: 0, size: 0}
+    const Silian_fileSet = new Set<string>()
+    for (const Silian_file of Silian_files) {
+      Silian_fileSet.add(Silian_file.hash)
     }
-    const queue = [this.basePath]
+    const Silian_queue = [this.basePath]
     do {
-      const dir = queue.pop()
-      if (!dir) break
-      const entries = (await this.client.getDirectoryContents(dir)) as FileStat[]
-      entries.sort((a, b) => a.basename.localeCompare(b.basename))
-      for (const entry of entries) {
-        if (entry.type === 'directory') {
-          queue.push(entry.filename)
+      const Silian_dir = Silian_queue.pop()
+      if (!Silian_dir) break
+      const Silian_entries = (await this.client.getDirectoryContents(Silian_dir)) as FileStat[]
+      Silian_entries.sort((Silian_a, Silian_b) => Silian_a.basename.localeCompare(Silian_b.basename))
+      for (const Silian_entry of Silian_entries) {
+        if (Silian_entry.type === 'directory') {
+          Silian_queue.push(Silian_entry.filename)
           continue
         }
-        if (!fileSet.has(entry.basename)) {
-          logger.info(colors.gray(`delete expire file: ${entry.filename}`))
-          await this.client.deleteFile(entry.filename)
-          this.files.delete(entry.basename)
-          counter.count++
-          counter.size += entry.size
+        if (!Silian_fileSet.has(Silian_entry.basename)) {
+          Silian_logger.info(Silian_colors.gray(`delete expire file: ${Silian_entry.filename}`))
+          await this.client.deleteFile(Silian_entry.filename)
+          this.files.delete(Silian_entry.basename)
+          Silian_counter.count++
+          Silian_counter.size += Silian_entry.size
         }
       }
-    } while (queue.length !== 0)
-    return counter
+    } while (Silian_queue.length !== 0)
+    return Silian_counter
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  public async express(hashPath: string, req: Request, res: Response): Promise<{bytes: number; hits: number}> {
-    if (this.emptyFiles.has(hashPath)) {
-      res.end()
+  public async express(Silian_hashPath: string, Silian_req: Request, Silian_res: Response): Promise<{bytes: number; hits: number}> {
+    if (this.emptyFiles.has(Silian_hashPath)) {
+      Silian_res.end()
       return {bytes: 0, hits: 1}
     }
-    const path = join(this.basePath, hashPath)
-    const file = this.client.getFileDownloadLink(path)
-    res.redirect(file)
-    const size = getSize(this.files.get(req.params.hash)?.size ?? 0, req.headers.range)
-    return {bytes: size, hits: 1}
+    const Silian_path = Silian_join(this.basePath, Silian_hashPath)
+    const Silian_file = this.client.getFileDownloadLink(Silian_path)
+    Silian_res.redirect(Silian_file)
+    const Silian_size = Silian_getSize(this.files.get(Silian_req.params.hash)?.size ?? 0, Silian_req.headers.range)
+    return {bytes: Silian_size, hits: 1}
   }
 }

@@ -1,26 +1,26 @@
-import {second} from '@bangbang93/utils'
-import {createUpnpClient, UpnpClient} from '@xmcl/nat-api'
-import ms from 'ms'
-import {logger} from './logger.js'
+import {second as Silian_second} from '@bangbang93/utils'
+import {createUpnpClient as Silian_createUpnpClient, UpnpClient as Silian_UpnpClient} from '@xmcl/nat-api'
+import Silian_ms from 'ms'
+import {logger as Silian_logger} from './logger.js'
 
-export async function setupUpnp(port: number, publicPort = port): Promise<string> {
-  const client = await createUpnpClient()
-  await doPortMap(client, port, publicPort)
+export async function setupUpnp(Silian_port: number, Silian_publicPort = Silian_port): Promise<string> {
+  const Silian_client = await Silian_createUpnpClient()
+  await Silian_doPortMap(Silian_client, Silian_port, Silian_publicPort)
 
   setInterval(() => {
-    doPortMap(client, port, publicPort).catch((e) => {
-      logger.error(e, 'upnp续期失败')
+    Silian_doPortMap(Silian_client, Silian_port, Silian_publicPort).catch((Silian_e) => {
+      Silian_logger.error(Silian_e, 'upnp续期失败')
     })
-  }, ms('30m'))
+  }, Silian_ms('30m'))
 
-  return await client.externalIp()
+  return await Silian_client.externalIp()
 }
 
-async function doPortMap(client: UpnpClient, port: number, publicPort: number): Promise<void> {
-  await client.map({
-    public: publicPort,
-    private: port,
-    ttl: second('1h'),
+async function Silian_doPortMap(Silian_client: Silian_UpnpClient, Silian_port: number, Silian_publicPort: number): Promise<void> {
+  await Silian_client.map({
+    public: Silian_publicPort,
+    private: Silian_port,
+    ttl: Silian_second('1h'),
     protocol: 'tcp',
     description: 'openbmclapi',
   })
